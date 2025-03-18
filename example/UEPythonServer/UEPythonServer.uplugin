@@ -1,0 +1,30 @@
+{
+	"FileVersion": 3,
+	"Version": 1,
+	"VersionName": "1.0",
+	"FriendlyName": "UEPythonServer",
+	"Description": "A plugin that runs an HTTP server in Unreal Engine, allowing remote execution of Python scripts and returning execution results.",
+	"Category": "Scripting",
+	"CreatedBy": "Wall-E_No.46024",
+	"CreatedByURL": "walle.no46024@gmail.com",
+	"DocsURL": "",
+	"MarketplaceURL": "",
+	"SupportURL": "",
+	"CanContainContent": true,
+	"IsBetaVersion": false,
+	"IsExperimentalVersion": false,
+	"Installed": false,
+	"Modules": [
+		{
+			"Name": "UEPythonServer",
+			"Type": "Runtime",
+			"LoadingPhase": "Default",
+			"PlatformAllowList": [
+				"Win64",
+				"Mac",
+				"Linux"
+			]
+		}
+	],
+	"EnabledByDefault": true
+}
