@@ -25,8 +25,8 @@ This phase focuses on developing the core MCP server, which will serve as the ce
 ### 4. Langchain Integration
 - [x] Set up basic Langchain components
 - [x] Implement memory/state management
-- [ ] Configure document processing capabilities
-- [ ] Create prompt templates for AI agent interactions
+- [x] Configure document processing capabilities
+- [x] Create prompt templates for AI agent interactions
 
 ### 5. Tool Function Implementation
 - [x] Define Blender tool functions (adapting from blender-mcp)
@@ -35,8 +35,8 @@ This phase focuses on developing the core MCP server, which will serve as the ce
 - [x] Add input validation for all tool functions
 
 ### 6. Testing Framework
-- [ ] Create unit tests for server components
-- [ ] Implement mock connections for testing
+- [x] Create unit tests for server components
+- [x] Implement mock connections for testing
 - [ ] Add integration test structure
 - [ ] Create test utilities for simulating requests
 
@@ -63,4 +63,7 @@ This phase focuses on developing the core MCP server, which will serve as the ce
 | March 20, 2023 | Dev | Implemented SSE endpoint | Added SSE endpoint with message handling and tool calls |
 | March 20, 2023 | Dev | Created API endpoints | Implemented status, message, and stream endpoints |
 | March 20, 2023 | Dev | Added error handling | Implemented comprehensive error handling and standardized responses |
-| March 20, 2023 | Dev | Improved input validation | Added validation for tool function arguments | 
+| March 20, 2023 | Dev | Improved input validation | Added validation for tool function arguments |
+| March 20, 2023 | Dev | Added document processing | Implemented Langchain document processing capabilities |
+| March 20, 2023 | Dev | Created prompt templates | Added templates and examples for AI agent interactions |
+| March 20, 2023 | Dev | Created unit tests | Added tests for server, langchain integration, and connections | 
