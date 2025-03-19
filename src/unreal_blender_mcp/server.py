@@ -23,6 +23,14 @@ from sse_starlette.sse import EventSourceResponse
 from .blender_connection import BlenderConnection
 from .unreal_connection import UnrealConnection
 from .langchain_integration import LangchainManager
+from .ai_tools import ToolHandler
+from .ai_tools.prompt_engineering import (
+    get_claude_system_prompt,
+    get_chatgpt_system_prompt,
+    get_cursor_system_prompt,
+    get_example_conversations,
+    get_error_recovery_prompts
+)
 
 # Configure logging
 logging.basicConfig(
@@ -74,6 +82,7 @@ class SuccessResponse(BaseModel):
 blender_connection = BlenderConnection()
 unreal_connection = UnrealConnection()
 langchain_manager = LangchainManager()
+tool_handler = ToolHandler(blender_connection, unreal_connection)
 
 # Custom exception handlers
 @app.exception_handler(RequestValidationError)
@@ -148,18 +157,23 @@ async def handle_tool_call(tool_name: str, tool_args: Dict[str, Any]) -> Dict[st
     logger.info(f"Handling tool call: {tool_name} with args: {tool_args}")
     
     try:
+        # Check if it's an AI tool (prefixed with mcp_)
+        if tool_name.startswith("mcp_"):
+            return tool_handler.handle_tool_call(tool_name, tool_args)
+        
+        # Legacy tool calls (for backward compatibility)
         # Blender tool calls
-        if tool_name == "get_scene_info":
-            return await blender_connection.get_scene_info()
+        elif tool_name == "get_scene_info":
+            return blender_connection.get_scene_info()
         elif tool_name == "get_object_info":
             if "object_name" not in tool_args:
                 raise ValueError("Missing required argument: object_name")
-            return await blender_connection.get_object_info(tool_args.get("object_name"))
+            return blender_connection.get_object_info(tool_args.get("object_name"))
         elif tool_name == "create_object":
             if "type" not in tool_args:
                 raise ValueError("Missing required argument: type")
-            return await blender_connection.create_object(
-                object_type=tool_args.get("type"),
+            return blender_connection.create_object(
+                type=tool_args.get("type"),
                 name=tool_args.get("name"),
                 location=tool_args.get("location"),
                 rotation=tool_args.get("rotation"),
@@ -168,26 +182,27 @@ async def handle_tool_call(tool_name: str, tool_args: Dict[str, Any]) -> Dict[st
         elif tool_name == "execute_blender_code":
             if "code" not in tool_args:
                 raise ValueError("Missing required argument: code")
-            return await blender_connection.execute_code(tool_args.get("code"))
+            return blender_connection.execute_code(tool_args.get("code"))
         
         # Unreal tool calls
         elif tool_name == "create_level":
             if "level_name" not in tool_args:
                 raise ValueError("Missing required argument: level_name")
-            return await unreal_connection.create_level(tool_args.get("level_name"))
+            return unreal_connection.create_level(tool_args.get("level_name"))
         elif tool_name == "import_asset":
             if "file_path" not in tool_args or "destination_path" not in tool_args:
                 raise ValueError("Missing required arguments: file_path and/or destination_path")
-            return await unreal_connection.import_asset(
+            return unreal_connection.import_asset(
                 tool_args.get("file_path"),
-                tool_args.get("destination_path")
+                tool_args.get("destination_path"),
+                tool_args.get("asset_name")
             )
         elif tool_name == "get_engine_version":
-            return await unreal_connection.get_engine_version()
+            return unreal_connection.get_engine_version()
         elif tool_name == "execute_unreal_code":
             if "code" not in tool_args:
                 raise ValueError("Missing required argument: code")
-            return await unreal_connection.execute_code(tool_args.get("code"))
+            return unreal_connection.execute_code(tool_args.get("code"))
         
         # Unknown tool
         else:
@@ -248,7 +263,7 @@ async def process_message(message: Message) -> AsyncGenerator[Dict[str, Any], No
                 "event": "message_received",
                 "data": json.dumps({
                     "id": message.id or generate_id(),
-                    "content": "Message received"
+                    "status": "success"
                 })
             }
     except Exception as e:
@@ -257,219 +272,324 @@ async def process_message(message: Message) -> AsyncGenerator[Dict[str, Any], No
         yield {
             "event": "error",
             "data": json.dumps({
-                "message": f"Error processing message: {str(e)}"
+                "status": "error",
+                "message": str(e)
             })
         }
 
-# API Endpoints
+# Routes
+
 @app.get("/")
 async def root():
-    """
-    Root endpoint providing server information.
-    """
-    return create_success_response({
-        "server": "Unreal-Blender MCP",
-        "version": "0.1.0",
-        "status": "running",
-        "endpoints": {
-            "stream": "SSE endpoint for AI agent communication",
-            "status": "Status information about connected services"
-        }
-    })
+    """Root endpoint that returns server information."""
+    try:
+        blender_status = "connected" if blender_connection.is_connected else "disconnected"
+        unreal_status = "connected" if unreal_connection.is_connected else "disconnected"
+        
+        return create_success_response({
+            "name": "Unreal-Blender MCP Server",
+            "status": "running",
+            "connections": {
+                "blender": blender_status,
+                "unreal": unreal_status
+            },
+            "active_streams": len(active_connections)
+        }, "Server is running")
+    except Exception as e:
+        logger.error(f"Error in root endpoint: {str(e)}")
+        raise HTTPException(status_code=500, detail=str(e))
 
 @app.get("/stream")
 async def stream_endpoint(request: Request):
     """
-    SSE endpoint for AI agent communication.
-    This endpoint establishes a long-lived connection with the AI agent.
+    Establish a server-sent events stream for real-time communication.
+    
+    Returns:
+        EventSourceResponse: A stream of server-sent events
     """
     try:
-        # Generate a connection ID
+        # Generate a unique connection ID
         connection_id = generate_id()
         
-        # Register the connection
+        # Create a new queue for this connection
+        queue = asyncio.Queue()
+        
+        # Store connection in active_connections
         active_connections[connection_id] = {
-            "created_at": time.time(),
-            "last_active": time.time(),
-            "request": request
+            "queue": queue,
+            "created_at": time.time()
         }
         
-        logger.info(f"New connection established: {connection_id}")
+        logger.info(f"New SSE connection established: {connection_id}")
+        
+        # Send initial connection message
+        await queue.put({
+            "event": "connected",
+            "data": json.dumps({
+                "connection_id": connection_id,
+                "message": "Connection established"
+            })
+        })
         
         async def event_generator():
             try:
-                # Send initial welcome message
-                yield {
-                    "event": "connected",
-                    "data": json.dumps({
-                        "connection_id": connection_id,
-                        "message": "Connected to Unreal-Blender MCP Server"
-                    })
-                }
-                
-                # Keep the connection alive
+                # Keep the connection open
                 while True:
-                    if await request.is_disconnected():
-                        logger.info(f"Client disconnected: {connection_id}")
-                        if connection_id in active_connections:
-                            del active_connections[connection_id]
+                    # Get the next message from the queue
+                    message = await queue.get()
+                    
+                    # Check if the message is a disconnect signal
+                    if message.get("event") == "disconnect":
                         break
                     
-                    # Send a heartbeat every 30 seconds
-                    yield {
-                        "event": "heartbeat",
-                        "data": json.dumps({
-                            "timestamp": time.time()
-                        })
-                    }
+                    # Yield the message to the client
+                    yield message
                     
-                    # Update last active time
-                    if connection_id in active_connections:
-                        active_connections[connection_id]["last_active"] = time.time()
-                    
-                    await asyncio.sleep(30)
-                    
-            except Exception as e:
-                logger.error(f"Error in event generator: {str(e)}")
-                logger.error(traceback.format_exc())
-                
-                # Send error to client
-                yield {
-                    "event": "error",
-                    "data": json.dumps({
-                        "message": f"Stream error: {str(e)}"
-                    })
-                }
-                
+                    # Mark the task as done
+                    queue.task_done()
+            except asyncio.CancelledError:
+                logger.info(f"Stream connection closed: {connection_id}")
+            finally:
+                # Remove connection when client disconnects
                 if connection_id in active_connections:
                     del active_connections[connection_id]
+                logger.info(f"Stream connection removed: {connection_id}")
         
+        # Return the event stream
         return EventSourceResponse(event_generator())
     except Exception as e:
         logger.error(f"Error in stream endpoint: {str(e)}")
-        logger.error(traceback.format_exc())
-        raise HTTPException(
-            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=f"Stream error: {str(e)}"
-        )
+        raise HTTPException(status_code=500, detail=str(e))
 
 @app.post("/message")
 async def message_endpoint(message: Message):
     """
-    Endpoint for receiving individual messages.
-    This is useful for clients that can't maintain an SSE connection.
+    Process a message from an AI agent.
+    
+    Args:
+        message: The message to process
+        
+    Returns:
+        Dict with the result
     """
     try:
-        # Process the message
+        # For non-streaming responses, collect all results
         results = []
         async for result in process_message(message):
             results.append(result)
         
-        # Return the results
-        return create_success_response({"results": results})
-    except ValidationError as e:
-        logger.error(f"Validation error: {str(e)}")
-        raise HTTPException(
-            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
-            detail=f"Validation error: {str(e)}"
-        )
+        return create_success_response({
+            "results": results
+        }, "Message processed")
     except Exception as e:
-        logger.error(f"Error processing message: {str(e)}")
-        logger.error(traceback.format_exc())
-        raise HTTPException(
-            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=f"Error processing message: {str(e)}"
-        )
+        logger.error(f"Error in message endpoint: {str(e)}")
+        raise HTTPException(status_code=500, detail=str(e))
 
 @app.post("/stream/send")
 async def send_to_stream(message: Message, connection_id: str):
     """
-    Send a message to a specific SSE stream.
-    This is useful for sending messages from one client to another.
+    Send a message to a specific stream connection.
+    
+    Args:
+        message: The message to send
+        connection_id: ID of the connection to send to
+        
+    Returns:
+        Dict with the result
     """
     try:
+        # Check if the connection exists
         if connection_id not in active_connections:
-            raise HTTPException(
-                status_code=status.HTTP_404_NOT_FOUND,
-                detail=f"Connection {connection_id} not found"
-            )
+            raise HTTPException(status_code=404, detail=f"Connection not found: {connection_id}")
         
-        # Process the message and get results
-        results = []
-        async for result in process_message(message):
-            results.append(result)
+        # Get the connection queue
+        queue = active_connections[connection_id]["queue"]
         
-        return create_success_response({"sent": True, "results": results})
-    except HTTPException:
-        # Re-raise HTTP exceptions
-        raise
-    except ValidationError as e:
-        logger.error(f"Validation error: {str(e)}")
-        raise HTTPException(
-            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
-            detail=f"Validation error: {str(e)}"
+        # Process the message and send results to the queue
+        background_tasks = BackgroundTasks()
+        
+        async def process_and_queue():
+            async for result in process_message(message):
+                await queue.put(result)
+        
+        # Add the task to the background tasks
+        background_tasks.add_task(process_and_queue)
+        
+        return JSONResponse(
+            content=create_success_response({
+                "connection_id": connection_id,
+                "message": "Message sent to stream"
+            }),
+            background=background_tasks
         )
     except Exception as e:
-        logger.error(f"Error sending to stream: {str(e)}")
-        logger.error(traceback.format_exc())
-        raise HTTPException(
-            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=f"Error sending to stream: {str(e)}"
-        )
+        logger.error(f"Error in send_to_stream endpoint: {str(e)}")
+        if isinstance(e, HTTPException):
+            raise e
+        raise HTTPException(status_code=500, detail=str(e))
+
+@app.get("/ai/prompts")
+async def get_ai_prompts(
+    platform: Optional[str] = None,
+    ai_type: Optional[str] = "claude"
+):
+    """
+    Get system prompts for AI agents.
+    
+    Args:
+        platform: Platform to include in prompts (blender, unreal, or both)
+        ai_type: Type of AI agent (claude, chatgpt, cursor)
+        
+    Returns:
+        Dict with the system prompt
+    """
+    try:
+        include_blender = platform in [None, "blender", "both"]
+        include_unreal = platform in [None, "unreal", "both"]
+        
+        if ai_type == "claude":
+            prompt = get_claude_system_prompt(include_blender, include_unreal)
+        elif ai_type == "chatgpt":
+            prompt = get_chatgpt_system_prompt(include_blender, include_unreal)
+        elif ai_type == "cursor":
+            prompt = get_cursor_system_prompt(include_blender, include_unreal)
+        else:
+            raise HTTPException(status_code=400, detail=f"Unsupported AI type: {ai_type}")
+        
+        return create_success_response({
+            "prompt": prompt,
+            "ai_type": ai_type,
+            "platforms": {
+                "blender": include_blender,
+                "unreal": include_unreal
+            }
+        })
+    except Exception as e:
+        logger.error(f"Error in get_ai_prompts endpoint: {str(e)}")
+        if isinstance(e, HTTPException):
+            raise e
+        raise HTTPException(status_code=500, detail=str(e))
+
+@app.get("/ai/examples")
+async def get_ai_examples():
+    """
+    Get example conversations for AI agents.
+    
+    Returns:
+        Dict with example conversations
+    """
+    try:
+        examples = get_example_conversations()
+        return create_success_response({
+            "examples": examples
+        })
+    except Exception as e:
+        logger.error(f"Error in get_ai_examples endpoint: {str(e)}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+@app.get("/ai/tools")
+async def get_ai_tools(category: Optional[str] = None):
+    """
+    Get available AI tools.
+    
+    Args:
+        category: Optional category to filter by (blender or unreal)
+        
+    Returns:
+        Dict with available tools
+    """
+    try:
+        tools = tool_handler.list_available_tools()
+        
+        if category:
+            tools = [tool for tool in tools if tool.get("category") == category]
+        
+        return create_success_response({
+            "tools": tools,
+            "category": category
+        })
+    except Exception as e:
+        logger.error(f"Error in get_ai_tools endpoint: {str(e)}")
+        raise HTTPException(status_code=500, detail=str(e))
 
 @app.get("/status")
 async def status_endpoint():
-    """
-    Status information about connected services.
-    """
+    """Get the status of all connections."""
     try:
-        # Check Blender connection
-        blender_status = "Connected" if await blender_connection.connect() else "Disconnected"
-        if blender_status == "Connected":
-            await blender_connection.close()
+        # Try to connect to Blender if not already connected
+        blender_status = {
+            "connected": blender_connection.is_connected
+        }
+        if not blender_connection.is_connected:
+            try:
+                blender_connection.connect()
+                blender_status["connected"] = True
+                blender_status["message"] = "Connected successfully"
+            except Exception as e:
+                blender_status["error"] = str(e)
         
-        # Check Unreal connection
-        unreal_status = "Connected" if await unreal_connection.connect() else "Disconnected"
-        if unreal_status == "Connected":
-            await unreal_connection.close()
+        # Try to connect to Unreal if not already connected
+        unreal_status = {
+            "connected": unreal_connection.is_connected
+        }
+        if not unreal_connection.is_connected:
+            try:
+                unreal_connection.connect()
+                unreal_status["connected"] = True
+                unreal_status["message"] = "Connected successfully"
+            except Exception as e:
+                unreal_status["error"] = str(e)
         
         return create_success_response({
-            "server": "running",
-            "active_connections": len(active_connections),
-            "blender": blender_status,
-            "unreal": unreal_status,
-            "langchain": "Active"
+            "server": {
+                "status": "running",
+                "uptime": time.time() - startup_time
+            },
+            "connections": {
+                "blender": blender_status,
+                "unreal": unreal_status
+            },
+            "active_streams": len(active_connections)
         })
     except Exception as e:
-        logger.error(f"Error checking status: {str(e)}")
-        logger.error(traceback.format_exc())
-        raise HTTPException(
-            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=f"Error checking status: {str(e)}"
-        )
+        logger.error(f"Error in status endpoint: {str(e)}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+# Server events
+startup_time = 0
 
 @app.on_event("startup")
 async def startup_event():
-    """
-    Executed when the server starts up.
-    """
-    logger.info("Starting Unreal-Blender MCP Server")
+    """Initialize connections on server startup."""
+    global startup_time
+    startup_time = time.time()
+    logger.info("Server starting up...")
     
+    # Connect to Blender and Unreal
+    try:
+        blender_connection.connect()
+        logger.info("Connected to Blender")
+    except Exception as e:
+        logger.warning(f"Could not connect to Blender: {str(e)}")
+    
+    try:
+        unreal_connection.connect()
+        logger.info("Connected to Unreal Engine")
+    except Exception as e:
+        logger.warning(f"Could not connect to Unreal Engine: {str(e)}")
+
 @app.on_event("shutdown")
 async def shutdown_event():
-    """
-    Executed when the server shuts down.
-    """
-    logger.info("Shutting down Unreal-Blender MCP Server")
+    """Clean up connections on server shutdown."""
+    logger.info("Server shutting down...")
     
-    try:
-        await blender_connection.close()
-    except Exception as e:
-        logger.error(f"Error closing Blender connection: {str(e)}")
+    # Close all active connections
+    for connection_id, connection in active_connections.items():
+        try:
+            await connection["queue"].put({"event": "disconnect", "data": json.dumps({"message": "Server shutting down"})})
+        except Exception as e:
+            logger.error(f"Error closing connection {connection_id}: {str(e)}")
     
-    try:
-        await unreal_connection.close()
-    except Exception as e:
-        logger.error(f"Error closing Unreal connection: {str(e)}")
-        
-    logger.info("Connections closed") 
+    # Close Blender and Unreal connections
+    blender_connection.close()
+    unreal_connection.close() 
