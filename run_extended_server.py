@@ -50,8 +50,8 @@ def main():
     
     # Import the server extension
     try:
-        from src.unreal_blender_mcp.server_extension import ServerExtensionManager
-        from src.unreal_blender_mcp.server_extension import run_extended_server
+        from src.unreal_blender_mcp.blender_addon_server import ServerExtensionManager
+        from src.unreal_blender_mcp.blender_addon_server import run_extended_server
     except ImportError as e:
         logger.error(f"Failed to import server extension: {e}")
         logger.error("Make sure you're running this script from the project root directory")

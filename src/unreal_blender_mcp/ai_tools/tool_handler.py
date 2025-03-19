@@ -9,7 +9,7 @@ import json
 import logging
 from typing import Dict, Any, Union, Optional, List, Tuple
 
-from ..blender_connection import BlenderConnection
+from ..blender_addon_server.extended_server import ExtendedBlenderConnection as BlenderConnection
 from ..unreal_connection import UnrealConnection
 from .tool_definitions import get_tool_by_name, ALL_TOOLS
 

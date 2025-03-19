@@ -1,8 +1,3 @@
-"""
-Main entry point for unreal-blender-mcp.
-
-This script starts the MCP server.
-"""
 
 import logging
 import uvicorn

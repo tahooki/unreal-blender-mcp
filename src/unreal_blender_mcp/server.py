@@ -20,7 +20,11 @@ from pydantic import BaseModel, Field, ValidationError
 import time
 from sse_starlette.sse import EventSourceResponse
 
-from .blender_connection import BlenderConnection
+from .blender_addon_server.extended_server import (
+    get_extended_blender_connection,
+    DummyBlenderConnection,
+    BlenderConnection
+)
 from .unreal_connection import UnrealConnection
 from .langchain_integration import LangchainManager
 from .ai_tools import ToolHandler
@@ -78,8 +82,17 @@ class SuccessResponse(BaseModel):
     data: Dict[str, Any]
     message: Optional[str] = None
 
-# Connection initialization
-blender_connection = BlenderConnection()
+# Connection initialization (ExtendedBlenderConnection 사용)
+try:
+    logger.info("Attempting to connect to Blender...")
+    blender_connection = get_extended_blender_connection()
+    logger.info("Successfully connected to Blender")
+except Exception as e:
+    logger.warning(f"Failed to connect to Blender: {str(e)}")
+    logger.warning("Using dummy Blender connection instead. Some features may not work.")
+    blender_connection = DummyBlenderConnection()
+
+# Initialize Unreal connection
 unreal_connection = UnrealConnection()
 langchain_manager = LangchainManager()
 tool_handler = ToolHandler(blender_connection, unreal_connection)
@@ -283,7 +296,8 @@ async def process_message(message: Message) -> AsyncGenerator[Dict[str, Any], No
 async def root():
     """Root endpoint that returns server information."""
     try:
-        blender_status = "connected" if blender_connection.is_connected else "disconnected"
+        # is_connected 속성 대신 extended_features_enabled 속성 사용
+        blender_status = "connected" if blender_connection.extended_features_enabled else "disconnected"
         unreal_status = "connected" if unreal_connection.is_connected else "disconnected"
         
         return create_success_response({
@@ -299,7 +313,7 @@ async def root():
         logger.error(f"Error in root endpoint: {str(e)}")
         raise HTTPException(status_code=500, detail=str(e))
 
-@app.get("/stream")
+@app.get("/sse")
 async def stream_endpoint(request: Request):
     """
     Establish a server-sent events stream for real-time communication.
@@ -518,11 +532,11 @@ async def status_endpoint():
     try:
         # Try to connect to Blender if not already connected
         blender_status = {
-            "connected": blender_connection.is_connected
+            "connected": blender_connection.extended_features_enabled
         }
-        if not blender_connection.is_connected:
+        if not blender_connection.extended_features_enabled:
             try:
-                blender_connection.connect()
+                blender_connection.connect()  # 이제 동기 메서드 사용
                 blender_status["connected"] = True
                 blender_status["message"] = "Connected successfully"
             except Exception as e:
@@ -566,11 +580,31 @@ async def startup_event():
     logger.info("Server starting up...")
     
     # Connect to Blender and Unreal
-    try:
-        blender_connection.connect()
-        logger.info("Connected to Blender")
-    except Exception as e:
-        logger.warning(f"Could not connect to Blender: {str(e)}")
+    global blender_connection
+    if isinstance(blender_connection, DummyBlenderConnection):
+        # 더미 연결 사용 중이면 다시 연결 시도
+        try:
+            logger.info("Attempting to reconnect to Blender...")
+            real_connection = get_extended_blender_connection()
+            # 성공하면 글로벌 변수 업데이트
+            blender_connection = real_connection
+            logger.info("Connected to Blender")
+        except Exception as e:
+            logger.warning(f"Could not connect to Blender: {str(e)}")
+    else:
+        # 이미 연결된 경우 연결 확인
+        try:
+            logger.info("Validating Blender connection...")
+            blender_connection.send_command("get_scene_info")
+            logger.info("Connected to Blender")
+        except Exception as e:
+            logger.warning(f"Blender connection validation failed: {str(e)}")
+            try:
+                # 다시 연결 시도
+                blender_connection.connect()
+                logger.info("Reconnected to Blender")
+            except Exception as reconnect_error:
+                logger.warning(f"Could not reconnect to Blender: {str(reconnect_error)}")
     
     try:
         unreal_connection.connect()
@@ -580,16 +614,33 @@ async def startup_event():
 
 @app.on_event("shutdown")
 async def shutdown_event():
-    """Clean up connections on server shutdown."""
+    """Clean up when the server shuts down."""
     logger.info("Server shutting down...")
     
-    # Close all active connections
-    for connection_id, connection in active_connections.items():
-        try:
-            await connection["queue"].put({"event": "disconnect", "data": json.dumps({"message": "Server shutting down"})})
-        except Exception as e:
-            logger.error(f"Error closing connection {connection_id}: {str(e)}")
+    # Clean up connections
+    try:
+        # Get all extended connection instances
+        if hasattr(blender_connection, "disconnect"):
+            blender_connection.disconnect()
+        else:
+            logger.warning("Blender connection does not have disconnect method")
+    except Exception as e:
+        logger.error(f"Error disconnecting from Blender: {str(e)}")
     
-    # Close Blender and Unreal connections
-    blender_connection.close()
-    unreal_connection.close() 
+    try:
+        # Properly close the Unreal connection
+        if hasattr(unreal_connection, "disconnect"):
+            unreal_connection.disconnect()
+        else:
+            logger.warning("Unreal connection does not have disconnect method")
+    except Exception as e:
+        logger.error(f"Error disconnecting from Unreal Engine: {str(e)}")
+    
+    # Clean up all active connections
+    for conn_id, conn_data in list(active_connections.items()):
+        try:
+            active_connections.pop(conn_id)
+        except Exception as e:
+            logger.error(f"Error cleaning up connection {conn_id}: {str(e)}")
+    
+    logger.info("Server shutdown complete") 

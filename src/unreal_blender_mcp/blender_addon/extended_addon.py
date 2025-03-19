@@ -9,6 +9,7 @@ import bpy
 import os
 import importlib.util
 from typing import Dict, Any, Optional, List, Tuple
+from addon import BlenderMCPServer, register as original_register, unregister as original_unregister
 
 # 파일 상단에 bl_info 딕셔너리 추가
 bl_info = {
@@ -121,9 +122,11 @@ class ExtendedBlenderMCPServer(BlenderMCPServer):
     Extended version of BlenderMCPServer with additional functionality.
     """
     
-    def __init__(self, host='localhost', port=8400):
-        # Call the parent class's __init__ method
+    def __init__(self, host='localhost', port=8401):
         super().__init__(host=host, port=port)
+        self.running = False
+        self.socket = None
+        self.server_thread = None
         print("Extended BlenderMCPServer initialized")
     
     def _execute_command_internal(self, command):
@@ -207,11 +210,17 @@ class EXTENDED_BLENDERMCP_OT_StartServer(bpy.types.Operator):
     def execute(self, context):
         scene = context.scene
         
-        # Create a new server instance of the extended type
-        if not hasattr(bpy.types, "extended_blendermcp_server") or not bpy.types.extended_blendermcp_server:
-            bpy.types.extended_blendermcp_server = ExtendedBlenderMCPServer(port=scene.extended_blendermcp_port)
+        # Stop any existing server first
+        if hasattr(bpy.types, "blendermcp_server") and bpy.types.blendermcp_server:
+            bpy.types.blendermcp_server.stop()
+            del bpy.types.blendermcp_server
+            
+        if hasattr(bpy.types, "extended_blendermcp_server") and bpy.types.extended_blendermcp_server:
+            bpy.types.extended_blendermcp_server.stop()
+            del bpy.types.extended_blendermcp_server
         
-        # Start the server
+        # Create and start new server instance
+        bpy.types.extended_blendermcp_server = ExtendedBlenderMCPServer(port=scene.extended_blendermcp_port)
         bpy.types.extended_blendermcp_server.start()
         scene.extended_blendermcp_server_running = True
         
@@ -261,7 +270,7 @@ def register_extended():
     bpy.types.Scene.extended_blendermcp_port = bpy.props.IntProperty(
         name="Extended Port",
         description="Port for the Extended BlenderMCP server",
-        default=8401,  # Different from the original to avoid conflicts
+        default=8401,
         min=1024,
         max=65535
     )
