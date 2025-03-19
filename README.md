@@ -261,3 +261,19 @@ This project is licensed under the MIT License - see the LICENSE file for detail
 ## Acknowledgements
 
 - This project builds upon [blender-mcp](https://github.com/ahujasid/blender-mcp.git) by Siddharth Ahuja.
+
+## Future Developments
+
+The following improvements are planned for future releases:
+
+### Structured Unreal Engine API
+
+Currently, the Unreal Engine communication relies primarily on direct Python code execution. A planned enhancement is to implement a structured API similar to the Blender integration:
+
+- Create predefined functions for common Unreal Engine operations
+- Implement proper error handling and validation
+- Improve security by limiting execution scope
+- Enhance stability and predictability of operations
+- Maintain backward compatibility while adding structure
+
+This enhancement will create a more consistent experience across both engines and improve the overall reliability of the system. See the [workflow documentation](workflow/08-unreal-engine-refinement.md) for more details on this planned development.
