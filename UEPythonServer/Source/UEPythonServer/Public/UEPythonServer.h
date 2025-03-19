@@ -32,6 +32,12 @@ public:
 	 */
 	bool IsServerRunning() const;
 	
+	/**
+	 * Gets the port the server is running on
+	 * @return The port number
+	 */
+	uint32 GetServerPort() const { return ServerPort; }
+	
 private:
 	/** The HTTP server instance */
 	TSharedPtr<IHttpRouter> HttpRouter;
