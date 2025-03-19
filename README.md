@@ -6,6 +6,20 @@ Unreal-Blender MCP is a unified server for controlling both Blender and Unreal E
 
 This project extends the [blender-mcp](https://github.com/ahujasid/blender-mcp.git) framework to include support for Unreal Engine, allowing AI agents like Claude and ChatGPT to simultaneously control both platforms through a single interface.
 
+## Submodule Information
+
+This project includes `blender-mcp` as a Git submodule. When cloning the repository, use the following commands:
+
+```bash
+# Clone with submodules
+git clone --recursive https://github.com/tahooki/unreal-blender-mcp.git
+
+# Or clone normally and then initialize submodules
+git clone https://github.com/tahooki/unreal-blender-mcp.git
+cd unreal-blender-mcp
+git submodule update --init --recursive
+```
+
 ## Features
 
 - **Unified Control**: Single MCP server to control both Blender and Unreal Engine
@@ -217,17 +231,3 @@ This project is licensed under the MIT License - see the LICENSE file for detail
 ## Acknowledgements
 
 - This project builds upon [blender-mcp](https://github.com/ahujasid/blender-mcp.git) by Siddharth Ahuja.
-
-## 서브모듈 정보
-
-이 프로젝트는 `blender-mcp`를 Git 서브모듈로 포함하고 있습니다. 저장소를 클론할 때 다음 명령어를 사용하세요:
-
-```bash
-# 서브모듈을 포함하여 클론
-git clone --recursive https://github.com/tahooki/unreal-blender-mcp.git
-
-# 또는 일반 클론 후 서브모듈 초기화
-git clone https://github.com/tahooki/unreal-blender-mcp.git
-cd unreal-blender-mcp
-git submodule update --init --recursive
-```
