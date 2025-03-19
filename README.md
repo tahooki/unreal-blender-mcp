@@ -63,117 +63,111 @@ This project uses an extension approach to maintain compatibility with upstream 
 
 This approach allows easy updates from the original projects without code conflicts.
 
-## Installation
+## Step-by-Step Installation and Setup Guide
 
-### Requirements
+### Prerequisites
 
 - Python 3.10 or later
 - Blender 3.0 or later
 - Unreal Engine 5.0 or later
-- uv package manager
+- uv package manager (install with `pip install uv` if you don't have it)
 
-### Installation Steps
+### 1. Clone the Repository
 
-1. Clone this repository:
-   ```bash
-   git clone --recursive https://github.com/tahooki/unreal-blender-mcp.git
-   cd unreal-blender-mcp
-   ```
+```bash
+# Clone with submodules (recommended)
+git clone --recursive https://github.com/tahooki/unreal-blender-mcp.git
+cd unreal-blender-mcp
 
-2. Create a virtual environment and install dependencies:
-   ```bash
-   uv venv
-   uv pip install -e .
-   ```
-
-3. Install the Blender addon (choose one option):
-   
-   **Option 1: Standard addon (Original blender-mcp)**
-   - Open Blender
-   - Go to Edit > Preferences > Add-ons
-   - Click "Install..." and select `blender-mcp/addon.py`
-   - Enable the "Interface: Blender MCP" addon
-
-   **Option 2: Extended addon (With additional features)**
-   - Run the extension installer script:
-     ```bash
-     python -c "from src.unreal_blender_mcp.blender_addon import BlenderAddonManager; BlenderAddonManager().install_to_blender(force=True)"
-     ```
-   - Open Blender
-   - Go to Edit > Preferences > Add-ons
-   - Enable the "Interface: Extended Blender MCP" addon
-
-4. Install the Unreal plugin:
-   - Copy the `UEPythonServer` folder to your Unreal project's `Plugins` directory
-   - Start Unreal Engine and enable the plugin in Edit > Plugins
-   - Restart the engine
-
-## Usage
-
-### Running the Standard Server
-
-1. Start the MCP server:
-   ```bash
-   python main.py
-   ```
-
-2. Start Blender and enable the MCP server from the BlenderMCP panel in the 3D viewport sidebar
-
-3. Start Unreal Engine with your project
-
-4. Configure your AI agent to communicate with the MCP server
-
-### Running the Extended Server
-
-1. Start the extended MCP server:
-   ```bash
-   python run_extended_server.py
-   ```
-   
-   You can customize server options:
-   ```bash
-   python run_extended_server.py --host 127.0.0.1 --port 8080 --log-level DEBUG
-   ```
-
-2. Start Blender and enable the Extended MCP server from the ExtBlenderMCP panel in the 3D viewport sidebar
-
-3. Start Unreal Engine with your project
-
-4. Configure your AI agent to communicate with the extended MCP server
-
-### Using the Extension Interfaces Programmatically
-
-**Blender Addon Extension:**
-```python
-from src.unreal_blender_mcp.blender_addon import BlenderAddonManager
-
-# Create installer
-manager = BlenderAddonManager()
-
-# Install to Blender
-manager.install_to_blender(blender_version="3.6", force=True)
-
-# Generate startup script for Blender
-script = manager.generate_blender_startup_script(port=8401)
-print(script)  # Run this in Blender's Python console
+# Or if you already cloned without --recursive:
+git clone https://github.com/tahooki/unreal-blender-mcp.git
+cd unreal-blender-mcp
+git submodule update --init --recursive
 ```
 
-**Server Extension:**
-```python
-from src.unreal_blender_mcp.server_extension import ServerExtensionManager
+### 2. Set Up Python Environment
 
-# Create manager
-manager = ServerExtensionManager()
+```bash
+# Create a virtual environment and activate it
+uv venv
+# On Windows:
+.\venv\Scripts\activate
+# On macOS/Linux:
+source venv/bin/activate
 
-# Check environment
-env_check = manager.check_environment()
-print(env_check)
-
-# Run server in subprocess
-server_process = manager.run_server(port=8080)
+# Install project dependencies
+uv pip install -e .
 ```
 
-### Integration with Claude
+### 3. Install Blender Addon
+
+Choose ONE of the following options:
+
+#### Option A: Standard Addon (Original blender-mcp)
+1. Open Blender
+2. Navigate to Edit > Preferences > Add-ons
+3. Click "Install..." button
+4. Browse and select `blender-mcp/addon.py` file
+5. Enable the "Interface: Blender MCP" addon (check the box)
+
+#### Option B: Extended Addon (With additional features)
+1. Run the extension installer script:
+   ```bash
+   python -c "from src.unreal_blender_mcp.blender_addon import BlenderAddonManager; BlenderAddonManager().install_to_blender(force=True)"
+   ```
+2. Open Blender
+3. Navigate to Edit > Preferences > Add-ons
+4. Find and enable the "Interface: Extended Blender MCP" addon (check the box)
+
+### 4. Install Unreal Engine Plugin
+
+1. Locate the `UEPythonServer` folder in this project
+2. Copy the entire folder to your Unreal project's `Plugins` directory
+   - If your project doesn't have a `Plugins` directory, create one
+3. Start Unreal Engine with your project
+4. Navigate to Edit > Plugins in the menu
+5. Find and enable the Python Server plugin
+6. Restart Unreal Engine when prompted
+
+### 5. Start the MCP Server
+
+Choose ONE of the following options:
+
+#### Option A: Standard Server
+```bash
+# Make sure your virtual environment is activated
+python main.py
+```
+
+#### Option B: Extended Server (More features)
+```bash
+# Make sure your virtual environment is activated
+python run_extended_server.py
+
+# Optional: Customize server options
+python run_extended_server.py --host 127.0.0.1 --port 8080 --log-level DEBUG
+```
+
+### 6. Enable the Blender Server Connection
+
+1. Start Blender (if not already running)
+2. In the 3D viewport, press `N` to open the sidebar panel
+3. Select the appropriate tab:
+   - "BlenderMCP" (if using standard addon)
+   - "ExtBlenderMCP" (if using extended addon)
+4. Click the "Start Server" button
+5. Verify the server starts successfully (check console output)
+
+### 7. Verify Unreal Engine Connection
+
+1. With Unreal Engine running and plugin enabled
+2. The Python server should automatically start
+3. Check the Output Log (Window > Developer Tools > Output Log) for any messages
+4. The Unreal plugin should now be ready to receive commands
+
+### 8. Connect an AI Agent
+
+#### Option A: Integrate with Claude for Desktop
 
 Add the following to Claude for Desktop's configuration:
 
@@ -189,19 +183,55 @@ Add the following to Claude for Desktop's configuration:
         "unreal-blender-ext": {
             "command": "python",
             "args": [
-                "path/to/unreal-blender-mcp/run_extended_server.py"
+                "/path/to/unreal-blender-mcp/run_extended_server.py"
             ]
         }
     }
 }
 ```
+Replace `/path/to/` with your actual project path.
 
-### Integration with Cursor
+#### Option B: Integrate with Cursor
 
-Add the following commands in Cursor Settings > MCP:
+1. Open Cursor Settings
+2. Navigate to MCP section
+3. Add the following commands:
+   - Standard Server: `uvx unreal-blender-mcp`
+   - Extended Server: `python /path/to/unreal-blender-mcp/run_extended_server.py`
+   
+   Replace `/path/to/` with your actual project path.
 
-- Standard Server: `uvx unreal-blender-mcp`
-- Extended Server: `python path/to/unreal-blender-mcp/run_extended_server.py`
+#### Option C: Integrate with Other AI Tools
+
+Refer to your AI tool's documentation for integrating with MCP servers, and point it to:
+- MCP Server URL: `http://localhost:8000` (or custom port if specified)
+
+### 9. Testing the System
+
+Once all components are running:
+
+1. Use your AI agent to interact with Blender by asking it to:
+   - Create a simple cube or sphere
+   - Modify object properties
+   - Create materials
+
+2. Use your AI agent to interact with Unreal Engine by asking it to:
+   - Create a new level
+   - Place assets
+   - Modify scene properties
+
+3. Try more complex operations that involve both platforms working together
+
+### Troubleshooting
+
+If you encounter issues:
+
+1. Check that all servers are running (MCP, Blender, Unreal)
+2. Verify port configurations match (default: 8000 for MCP, 8400/8401 for Blender, 8500 for Unreal)
+3. Check console outputs for error messages
+4. Restart components in the correct order: MCP server first, then Blender, then Unreal Engine
+
+For more detailed information on development and extending the system, see the [Project Document](Project-document.md) and [workflow](workflow/) directory.
 
 ## Comparison: Standard vs Extended
 
