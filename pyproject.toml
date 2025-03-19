@@ -1,0 +1,58 @@
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[project]
+name = "unreal-blender-mcp"
+version = "0.1.0"
+description = "Unified MCP server for controlling Blender and Unreal Engine via AI agents"
+readme = "README.md"
+requires-python = ">=3.10"
+license = { text = "MIT" }
+authors = [
+    { name = "Unreal-Blender MCP Developer", email = "example@example.com" }
+]
+classifiers = [
+    "Development Status :: 3 - Alpha",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+    "License :: OSI Approved :: MIT License",
+    "Operating System :: OS Independent",
+]
+dependencies = [
+    "fastapi>=0.103.1",
+    "uvicorn>=0.23.2",
+    "sse-starlette>=1.6.5",
+    "langchain>=0.0.292",
+    "aiohttp>=3.8.5",
+    "langchain-community>=0.0.1",
+]
+
+[project.optional-dependencies]
+dev = [
+    "pytest>=7.3.1",
+    "pytest-asyncio>=0.21.1",
+    "black>=23.7.0",
+    "ruff>=0.0.286",
+    "mypy>=1.5.1",
+]
+
+[project.scripts]
+unreal-blender-mcp = "main:main"
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/unreal_blender_mcp"]
+
+[tool.black]
+line-length = 88
+target-version = ["py310"]
+
+[tool.ruff]
+line-length = 88
+target-version = "py310"
+
+[tool.mypy]
+python_version = "3.10"
+warn_return_any = true
+warn_unused_configs = true 

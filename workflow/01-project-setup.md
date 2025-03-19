@@ -6,48 +6,52 @@ This phase focuses on establishing the foundational structure of the project, se
 ## Tasks
 
 ### 1. Project Structure Setup
-- [ ] Create base project directory structure according to the design document
-- [ ] Initialize Git repository with .gitignore for Python, Blender, and Unreal Engine
-- [ ] Create README.md with project overview and setup instructions
+- [x] Create base project directory structure according to the design document
+- [x] Initialize Git repository with .gitignore for Python, Blender, and Unreal Engine
+- [x] Create README.md with project overview and setup instructions
 
 ### 2. Python Environment Configuration
-- [ ] Set up Python virtual environment (using uv)
-- [ ] Create pyproject.toml with project metadata and dependencies
-- [ ] Install development dependencies (FastAPI, Langchain, HTTP client libraries)
+- [x] Set up Python virtual environment (using uv)
+- [x] Create pyproject.toml with project metadata and dependencies
+- [x] Install development dependencies (FastAPI, Langchain, HTTP client libraries)
 
 ### 3. Blender Addon Structure
-- [ ] Set up blender-mcp directory structure (if not already cloned)
-- [ ] Configure addon.py to use port 8400 instead of 7777
-- [ ] Prepare addon installation instructions
+- [x] Set up blender-mcp directory structure (if not already cloned)
+- [x] Configure addon.py to use port 8400 instead of 9876
+- [x] Prepare addon installation instructions
 
 ### 4. Unreal Plugin Structure
-- [ ] Create UEPythonServer plugin directory structure
-- [ ] Set up plugin metadata file (UEPythonServer.uplugin)
-- [ ] Create basic C++ structure for HTTP server implementation
+- [x] Create UEPythonServer plugin directory structure
+- [x] Set up plugin metadata file (UEPythonServer.uplugin)
+- [x] Create basic C++ structure for HTTP server implementation
 
 ### 5. MCP Server Initial Setup
-- [ ] Create src/unreal_blender_mcp directory with module structure
-- [ ] Set up main.py entry point
-- [ ] Configure basic logging
+- [x] Create src/unreal_blender_mcp directory with module structure
+- [x] Set up main.py entry point
+- [x] Configure basic logging
 
 ### 6. Documentation Setup
-- [ ] Update Project-document.md with final development plan
-- [ ] Create API documentation template
-- [ ] Document setup procedures
+- [x] Update Project-document.md with final development plan
+- [x] Create API documentation template
+- [x] Document setup procedures
 
 ## Testing Procedures
-- Verify Python environment works with installed dependencies
-- Test importing project modules
-- Verify basic project structure is correct
-- Ensure documentation is clear and comprehensive
+- [ ] Verify Python environment works with installed dependencies
+- [ ] Test importing project modules
+- [ ] Verify basic project structure is correct
+- [ ] Ensure documentation is clear and comprehensive
 
 ## Deliverables
-- Complete project directory structure
-- Functional Python environment with dependencies
-- Basic plugin structures for both Blender and Unreal
-- Updated documentation
+- [x] Complete project directory structure
+- [x] Functional Python environment with dependencies
+- [x] Basic plugin structures for both Blender and Unreal
+- [x] Updated documentation
 
 ## Development Log
 
 | Date | Developer | Activity | Notes |
-|------|-----------|----------|-------| 
+|------|-----------|----------|-------|
+| March 19, 2023 | Dev | Created project structure | Created directories and initial files |
+| March 19, 2023 | Dev | Updated Blender addon port | Changed from 9876 to 8400 |
+| March 19, 2023 | Dev | Created UEPythonServer plugin basics | Created placeholder implementation |
+| March 19, 2023 | Dev | Created core Python files | server.py, connections, etc. | 

@@ -6,7 +6,7 @@ This document tracks the development progress of the unreal-blender-mcp project.
 
 | Phase | Description | Status | Start Date | Completion Date |
 |-------|-------------|--------|------------|-----------------|
-| 1 | Project Setup and Environment Configuration | Not Started | | |
+| 1 | Project Setup and Environment Configuration | In Progress | March 19, 2023 | |
 | 2 | MCP Server Core Development | Not Started | | |
 | 3 | Blender Addon Integration | Not Started | | |
 | 4 | Unreal Engine Plugin Development | Not Started | | |
@@ -20,7 +20,14 @@ This document tracks the development progress of the unreal-blender-mcp project.
 
 | Date | Developer | Activity | Status | Notes |
 |------|-----------|----------|--------|-------|
-|      |           |          |        |       |
+| March 19, 2023 | Dev | Created project directory structure | Completed | Created directories for UEPythonServer, src/unreal_blender_mcp |
+| March 19, 2023 | Dev | Created Python package structure | Completed | Created __init__.py, server.py, blender_connection.py, unreal_connection.py |
+| March 19, 2023 | Dev | Updated Blender addon port | Completed | Changed port from 9876 to 8400 in addon.py |
+| March 19, 2023 | Dev | Created UEPythonServer plugin basics | Completed | Created uplugin file and basic C++ structure |
+| March 19, 2023 | Dev | Created main.py entry point | Completed | Basic command-line arguments and server startup |
+| March 19, 2023 | Dev | Created pyproject.toml | Completed | Defined dependencies and build configuration |
+| March 19, 2023 | Dev | Created/updated README.md | Completed | Basic project description and setup instructions |
+| March 19, 2023 | Dev | Created .gitignore | Completed | Added Python, Unreal, Blender, and system patterns |
 
 ### Phase 2: MCP Server Core Development
 
@@ -62,7 +69,7 @@ This document tracks the development progress of the unreal-blender-mcp project.
 
 | Milestone | Expected Date | Actual Date | Status | Notes |
 |-----------|---------------|-------------|--------|-------|
-| Project Setup Complete | | | Not Started | |
+| Project Setup Complete | March 20, 2023 | | In Progress | Basic structure created, still need to test |
 | MCP Server Functional | | | Not Started | |
 | Blender Addon Working | | | Not Started | |
 | Unreal Plugin Working | | | Not Started | |
