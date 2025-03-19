@@ -122,7 +122,7 @@ class ExtendedBlenderMCPServer(BlenderMCPServer):
     Extended version of BlenderMCPServer with additional functionality.
     """
     
-    def __init__(self, host='localhost', port=8401):
+    def __init__(self, host='localhost', port=8400):
         super().__init__(host=host, port=port)
         self.running = False
         self.socket = None
@@ -270,7 +270,7 @@ def register_extended():
     bpy.types.Scene.extended_blendermcp_port = bpy.props.IntProperty(
         name="Extended Port",
         description="Port for the Extended BlenderMCP server",
-        default=8401,
+        default=8400,
         min=1024,
         max=65535
     )

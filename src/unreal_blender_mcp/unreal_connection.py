@@ -92,7 +92,6 @@ class UnrealConnection:
             return {"status": "error", "message": str(e)}
     
     # Convenience methods for common Unreal Engine operations
-    
     def create_level(self, level_name: str) -> Dict[str, Any]:
         """Create a new level in Unreal Engine."""
         code = f"import unreal\nunreal.EditorLevelLibrary.new_level('{level_name}')"
@@ -134,12 +133,13 @@ print(version)
         
         logger.info(f"Executing Unreal command: {command_type} with params: {params}")
         
-        # 여기서 명령 유형에 따라 적절한 코드 생성
         if not self.is_connected:
             return {"status": "error", "message": "Not connected to Unreal Engine"}
             
         try:
-            # 향후 명령 처리 로직 구현
             return {"status": "success", "message": f"Command {command_type} not implemented yet", "params": params}
         except Exception as e:
-            return {"status": "error", "message": f"Error executing command {command_type}: {str(e)}"} 
+            return {"status": "error", "message": f"Error executing command {command_type}: {str(e)}"}
+
+# Create a global instance for convenience
+unreal_connection = UnrealConnection() 

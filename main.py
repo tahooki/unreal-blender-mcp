@@ -1,11 +1,10 @@
-
 import logging
 import uvicorn
 import argparse
 from src.unreal_blender_mcp.server import app
 
 def main():
-    """Start the MCP server."""
+    """Start the unified MCP server."""
     parser = argparse.ArgumentParser(description="Start the Unreal-Blender MCP server")
     parser.add_argument(
         "--host", type=str, default="127.0.0.1", help="Host to run the server on"
@@ -27,7 +26,7 @@ def main():
         format="%(asctime)s - %(name)s - %(levelname)s - %(message)s",
     )
     
-    logging.info(f"Starting Unreal-Blender MCP server on {args.host}:{args.port}")
+    logging.info(f"Starting Unified MCP server on {args.host}:{args.port}")
     uvicorn.run(app, host=args.host, port=args.port)
 
 if __name__ == "__main__":

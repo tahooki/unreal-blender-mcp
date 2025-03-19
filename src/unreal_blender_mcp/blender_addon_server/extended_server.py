@@ -13,6 +13,8 @@ from typing import Dict, Any, Optional, Union, List, AsyncIterator
 import json
 import asyncio
 import time
+from fastapi import FastAPI
+import uvicorn
 
 # Set up logger
 logger = logging.getLogger("ExtendedBlenderMCPServer")
@@ -384,6 +386,7 @@ class ExtendedBlenderMCPServer:
     def __init__(self):
         """Initialize the extended server."""
         self.mcp = mcp
+        self.app = FastAPI()
         
         # Register any additional configuration or setup here
         logger.info("Extended BlenderMCP server initialized")
@@ -400,23 +403,22 @@ class ExtendedBlenderMCPServer:
         # Register any additional tools
         self.register_additional_tools()
         
-        # Start the FastAPI server that powers MCP
-        await self.mcp.start(host=host, port=port)
+        # Configure the server
+        config = uvicorn.Config(self.app, host=host, port=port)
+        server = uvicorn.Server(config)
+        await server.serve()
 
-def run_extended_server(host: str = "0.0.0.0", port: int = 8400):
+async def run_extended_server(host: str = "0.0.0.0", port: int = 8400):
     """Run the extended MCP server."""
     server = ExtendedBlenderMCPServer()
     
-    # Create and run the asyncio event loop
-    loop = asyncio.new_event_loop()
-    asyncio.set_event_loop(loop)
-    
     try:
-        loop.run_until_complete(server.start(host=host, port=port))
+        await server.start(host=host, port=port)
     except KeyboardInterrupt:
         logger.info("Server stopped by user")
-    finally:
-        loop.close()
+    except Exception as e:
+        logger.error(f"Server error: {str(e)}")
+        raise
 
 # Allow direct execution
 if __name__ == "__main__":

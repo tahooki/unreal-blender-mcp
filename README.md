@@ -46,9 +46,9 @@ The system consists of three main components:
 3. **Unreal Plugin**: HTTP server within Unreal Engine on port 8500
 
 ```
-[AI Agent] <--SSE--> [MCP Server (8000)] 
+[AI Agent] <--SSE--> [MCP Server (8300)] 
                         |
-                        |--HTTP--> [Blender Addon (8400/8401)]
+                        |--HTTP--> [Blender Addon (8400)]
                         |
                         |--HTTP--> [Unreal Plugin (8500)]
 ```
